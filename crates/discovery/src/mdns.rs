@@ -90,11 +90,11 @@ impl DiscoveryService {
             port,
             properties,
         )
-        .context("Failed to create ServiceInfo")?;
+        .with_context(|| format!("Failed to create ServiceInfo (type={}, instance={}, host={})", MDNS_SERVICE_TYPE, self.instance_name, host_name))?;
 
         self.daemon
             .register(service_info)
-            .context("Failed to register mDNS service")?;
+            .map_err(|e| anyhow::anyhow!("Failed to register mDNS service: {:?}", e))?;
 
         self.registered = true;
         info!("Registered mDNS service: {} on port {}", self.instance_name, port);
@@ -246,5 +246,19 @@ mod tests {
         let res = ds.register(9876, true);
         println!("Registration result: {:?}", res);
         assert!(res.is_ok(), "mDNS register failed: {:?}", res.err());
+    }
+
+    #[tokio::test]
+    async fn test_mdns_browse_then_register() {
+        let (tx1, _rx1) = mpsc::channel(10);
+        let ds1 = DiscoveryService::new("browser", 9876, tx1).expect("create ds1");
+        ds1.start_browsing().expect("start browsing");
+
+        let (tx2, _rx2) = mpsc::channel(10);
+        let config = screenextend_common::config::AppConfig::default();
+        let mut ds2 = DiscoveryService::new(&config.hostname, 9876, tx2).expect("create ds2");
+        let res = ds2.register(9876, true);
+        println!("Browse then register result: {:?}", res);
+        assert!(res.is_ok(), "browse then register failed: {:?}", res.err());
     }
 }

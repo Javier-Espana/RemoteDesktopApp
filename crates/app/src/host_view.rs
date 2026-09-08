@@ -157,8 +157,8 @@ impl HostView {
                     )
                     .await
                     {
-                        error!("Host service error: {}", e);
-                        status_clone.set_label(&format!("Error: {}", e));
+                        error!("Host service error: {:#}", e);
+                        status_clone.set_label(&format!("Error: {:#}", e));
                         running_flag.store(false, Ordering::SeqCst);
                         btn_clone.set_label("Start Sharing");
                         btn_clone.remove_css_class("destructive-action");
