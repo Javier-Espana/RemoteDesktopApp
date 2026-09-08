@@ -72,10 +72,20 @@ impl DiscoveryService {
         properties.insert("hostname".to_string(), hostname.clone());
         properties.insert("version".to_string(), "1".to_string());
 
+        let host_name = if hostname.ends_with(".local.") {
+            hostname.clone()
+        } else if let Some(stripped) = hostname.strip_suffix(".local") {
+            format!("{}.local.", stripped)
+        } else if let Some(stripped) = hostname.strip_suffix('.') {
+            format!("{}.local.", stripped)
+        } else {
+            format!("{}.local.", hostname)
+        };
+
         let service_info = ServiceInfo::new(
             MDNS_SERVICE_TYPE,
             &self.instance_name,
-            &format!("{}.", hostname),
+            &host_name,
             "",  // Let mdns-sd figure out the IP
             port,
             properties,
@@ -223,4 +233,18 @@ async fn handle_mdns_event(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mdns_registration() {
+        let (tx, _rx) = mpsc::channel(10);
+        let mut ds = DiscoveryService::new("test-host", 9876, tx).expect("create DiscoveryService");
+        let res = ds.register(9876, true);
+        println!("Registration result: {:?}", res);
+        assert!(res.is_ok(), "mDNS register failed: {:?}", res.err());
+    }
 }
