@@ -19,20 +19,40 @@ pub enum H264Encoder {
 }
 
 impl H264Encoder {
+    /// Test if an encoder pipeline can actually transition to Paused state.
+    fn test_encoder(desc: &str) -> bool {
+        let _ = gstreamer::init();
+        if let Ok(pipeline) = gstreamer::parse::launch(desc) {
+            let res = pipeline.set_state(gstreamer::State::Paused);
+            let _ = pipeline.set_state(gstreamer::State::Null);
+            res.is_ok()
+        } else {
+            false
+        }
+    }
+
     /// Detect the best available video encoder on the system.
     pub fn detect_best() -> Self {
         if gstreamer::ElementFactory::find("nvh264enc").is_some()
             && std::path::Path::new("/dev/nvidia0").exists()
         {
-            info!("Hardware video encoder detected: NVIDIA NVENC (nvh264enc)");
-            return H264Encoder::Nvenc;
+            if Self::test_encoder("videotestsrc num-buffers=1 ! videoconvert ! nvh264enc ! fakesink") {
+                info!("Hardware video encoder detected and verified: NVIDIA NVENC (nvh264enc)");
+                return H264Encoder::Nvenc;
+            } else {
+                tracing::warn!("NVIDIA GPU found but nvh264enc failed verification (driver preset incompatibility), falling back to x264enc");
+            }
         }
 
         if gstreamer::ElementFactory::find("vaapih264enc").is_some()
             && std::path::Path::new("/dev/dri/renderD128").exists()
         {
-            info!("Hardware video encoder detected: VA-API (vaapih264enc)");
-            return H264Encoder::Vaapi;
+            if Self::test_encoder("videotestsrc num-buffers=1 ! videoconvert ! vaapih264enc ! fakesink") {
+                info!("Hardware video encoder detected and verified: VA-API (vaapih264enc)");
+                return H264Encoder::Vaapi;
+            } else {
+                tracing::warn!("VA-API device found but vaapih264enc failed verification, falling back to x264enc");
+            }
         }
 
         info!("Using software video encoder: x264enc (CPU ultrafast zero-latency)");
@@ -102,7 +122,7 @@ impl HostPipeline {
             )
         } else {
             format!(
-                "ximagesrc display-name=$DISPLAY use-damage=false show-pointer=true \
+                "ximagesrc use-damage=false show-pointer=true \
                  startx={startx} starty={starty} endx={endx} endy={endy} \
                  ! video/x-raw,framerate={framerate}/1"
             )
