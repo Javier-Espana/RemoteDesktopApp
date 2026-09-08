@@ -12,5 +12,6 @@ tokio.workspace = true
 tracing.workspace = true
 rand.workspace = true
 hostname.workspace = true
+if-addrs.workspace = true
 mdns-sd.workspace = true
 screenextend-common.workspace = true

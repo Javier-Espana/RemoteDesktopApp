@@ -7,4 +7,4 @@ pub mod handshake;
 pub mod mdns;
 
 pub use handshake::{HandshakeClient, HandshakeServer, SignalingChannel};
-pub use mdns::DiscoveryService;
+pub use mdns::{get_local_ips, DiscoveryService};

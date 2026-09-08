@@ -29,6 +29,7 @@ hostname = "0.4"
 
 # Discovery
 mdns-sd = "0.12"
+if-addrs = "0.13"
 
 # GStreamer
 gstreamer = "0.23"

@@ -22,6 +22,36 @@ pub enum DiscoveryEvent {
     PeerLost(String),
 }
 
+/// Helper to get non-loopback local IPv4 addresses (e.g. Wi-Fi / Ethernet).
+pub fn get_local_ips() -> Vec<std::net::IpAddr> {
+    let mut ips = Vec::new();
+    if let Ok(interfaces) = if_addrs::get_if_addrs() {
+        for iface in interfaces {
+            if !iface.is_loopback() {
+                let ip = iface.ip();
+                if ip.is_ipv4() {
+                    // Skip docker and virtual bridge interfaces if physical is available
+                    let name = iface.name.to_lowercase();
+                    if !name.starts_with("docker") && !name.starts_with("br-") && !name.starts_with("veth") {
+                        ips.push(ip);
+                    }
+                }
+            }
+        }
+    }
+    // Fallback: if no non-docker IPv4 was found, include any non-loopback IPv4
+    if ips.is_empty() {
+        if let Ok(interfaces) = if_addrs::get_if_addrs() {
+            for iface in interfaces {
+                if !iface.is_loopback() && iface.ip().is_ipv4() {
+                    ips.push(iface.ip());
+                }
+            }
+        }
+    }
+    ips
+}
+
 /// mDNS-based service discovery for finding peers on the local network.
 pub struct DiscoveryService {
     daemon: ServiceDaemon,
@@ -188,9 +218,27 @@ async fn handle_mdns_event(
                 .map(|v| v.val_str() == "host")
                 .unwrap_or(false);
 
-            // Get the first available IP address
+            // Prefer IPv4 and physical interface addresses over docker/link-local IPv6
             let addresses = info.get_addresses();
-            let ip = match addresses.iter().next() {
+            let mut candidates: Vec<_> = addresses.iter().copied().collect();
+            candidates.sort_by_key(|addr| {
+                match addr {
+                    std::net::IpAddr::V4(v4) => {
+                        let octets = v4.octets();
+                        // Deprioritize docker default subnet 172.16.x.x / 172.17.x.x
+                        if octets[0] == 172 && (16..=31).contains(&octets[1]) {
+                            2
+                        } else if octets[0] == 127 {
+                            3
+                        } else {
+                            0 // Top priority: typical LAN (192.168.x.x, 10.x.x.x)
+                        }
+                    }
+                    std::net::IpAddr::V6(_) => 4,
+                }
+            });
+
+            let ip = match candidates.first() {
                 Some(addr) => *addr,
                 None => {
                     warn!("Service {} has no addresses", full_name);

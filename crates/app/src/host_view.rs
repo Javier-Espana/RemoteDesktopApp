@@ -23,6 +23,7 @@ pub struct HostView {
     container: gtk4::Box,
     status_label: gtk4::Label,
     pin_label: gtk4::Label,
+    ip_label: gtk4::Label,
     toggle_btn: gtk4::Button,
     is_running: Arc<AtomicBool>,
 }
@@ -70,6 +71,25 @@ impl HostView {
         status_row.add_suffix(&status_label);
         status_group.add(&status_row);
 
+        // IP Address Card
+        let ip_row = libadwaita::ActionRow::builder()
+            .title("Host IP Address")
+            .subtitle("Use this IP on your client machine to connect directly")
+            .build();
+        let local_ips = screenextend_discovery::get_local_ips();
+        let ip_str = if local_ips.is_empty() {
+            "127.0.0.1".to_string()
+        } else {
+            local_ips.iter().map(|ip| ip.to_string()).collect::<Vec<_>>().join(", ")
+        };
+        let ip_label = gtk4::Label::builder()
+            .label(&ip_str)
+            .css_classes(["title-3"])
+            .selectable(true)
+            .build();
+        ip_row.add_suffix(&ip_label);
+        status_group.add(&ip_row);
+
         // PIN Card
         let pin_row = libadwaita::ActionRow::builder()
             .title("Authentication PIN")
@@ -107,6 +127,7 @@ impl HostView {
             container,
             status_label,
             pin_label,
+            ip_label,
             toggle_btn,
             is_running,
         };
@@ -124,6 +145,7 @@ impl HostView {
         let toggle_btn = self.toggle_btn.clone();
         let status_label = self.status_label.clone();
         let pin_label = self.pin_label.clone();
+        let ip_label = self.ip_label.clone();
 
         toggle_btn.connect_clicked(move |btn| {
             if is_running.load(Ordering::SeqCst) {
@@ -142,6 +164,13 @@ impl HostView {
                 btn.remove_css_class("suggested-action");
                 btn.add_css_class("destructive-action");
                 status_label.set_label("Starting...");
+
+                // Refresh IP display
+                let current_ips = screenextend_discovery::get_local_ips();
+                if !current_ips.is_empty() {
+                    let ips_str = current_ips.iter().map(|ip| ip.to_string()).collect::<Vec<_>>().join(", ");
+                    ip_label.set_label(&ips_str);
+                }
 
                 let running_flag = Arc::clone(&is_running);
                 let btn_clone = btn.clone();
