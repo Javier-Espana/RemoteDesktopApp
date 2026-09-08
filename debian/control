@@ -23,6 +23,7 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          gstreamer1.0-plugins-good,
          gstreamer1.0-plugins-bad,
+         gstreamer1.0-nice,
          gstreamer1.0-pipewire,
          avahi-daemon
 Description: Peer-to-peer Linux screen extension utility

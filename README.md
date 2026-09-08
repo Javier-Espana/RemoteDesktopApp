@@ -72,7 +72,7 @@ sudo apt update && sudo apt install -y \
     gstreamer1.0-plugins-bad libgstreamer-plugins-bad1.0-dev \
     libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
     libgtk-4-dev libadwaita-1-dev \
-    libpipewire-0.3-dev libnice-dev libsrtp2-dev \
+    libpipewire-0.3-dev libnice-dev gstreamer1.0-nice libsrtp2-dev \
     gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly \
     gstreamer1.0-libav gstreamer1.0-pipewire \
     avahi-daemon

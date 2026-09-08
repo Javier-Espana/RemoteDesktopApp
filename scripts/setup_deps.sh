@@ -21,6 +21,7 @@ sudo apt install -y \
     libadwaita-1-dev \
     libpipewire-0.3-dev \
     libnice-dev \
+    gstreamer1.0-nice \
     libsrtp2-dev \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-ugly \
@@ -55,6 +56,7 @@ echo "=== Verifying GStreamer plugins ==="
 gst-inspect-1.0 --exists x264enc && echo "✓ x264enc" || echo "✗ x264enc MISSING"
 gst-inspect-1.0 --exists opusenc && echo "✓ opusenc" || echo "✗ opusenc MISSING"
 gst-inspect-1.0 --exists webrtcbin && echo "✓ webrtcbin" || echo "✗ webrtcbin MISSING"
+gst-inspect-1.0 --exists nicesink && echo "✓ nicesink (gstreamer1.0-nice)" || echo "✗ nicesink (gstreamer1.0-nice) MISSING"
 gst-inspect-1.0 --exists pipewiresrc && echo "✓ pipewiresrc" || echo "✗ pipewiresrc MISSING"
 gst-inspect-1.0 --exists ximagesrc && echo "✓ ximagesrc" || echo "✗ ximagesrc MISSING"
 

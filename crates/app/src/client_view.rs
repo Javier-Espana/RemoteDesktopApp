@@ -31,6 +31,7 @@ pub struct ClientView {
     status_label: gtk4::Label,
     peers_list: gtk4::ListBox,
     is_connected: Arc<AtomicBool>,
+    _discovery: Arc<std::sync::Mutex<Option<DiscoveryService>>>,
 }
 
 impl ClientView {
@@ -81,6 +82,13 @@ impl ClientView {
             .selection_mode(gtk4::SelectionMode::Single)
             .css_classes(["boxed-list"])
             .build();
+        let placeholder = gtk4::Label::builder()
+            .label("Searching for hosts on the local network...")
+            .css_classes(["dim-label"])
+            .margin_top(12)
+            .margin_bottom(12)
+            .build();
+        peers_list.set_placeholder(Some(&placeholder));
         peers_group.add(&peers_list);
         setup_page.append(&peers_group);
 
@@ -160,6 +168,7 @@ impl ClientView {
         container.append(&stack);
 
         let is_connected = Arc::new(AtomicBool::new(false));
+        let discovery_holder = Arc::new(std::sync::Mutex::new(None));
 
         let view = Self {
             container,
@@ -171,6 +180,7 @@ impl ClientView {
             status_label,
             peers_list,
             is_connected,
+            _discovery: discovery_holder,
         };
 
         view.setup_events(back_btn);
@@ -188,28 +198,38 @@ impl ClientView {
 
         if let Ok(discovery) = DiscoveryService::new(&config.hostname, DEFAULT_SIGNALING_PORT, tx) {
             let _ = discovery.start_browsing();
+            if let Ok(mut lock) = self._discovery.lock() {
+                *lock = Some(discovery);
+            }
 
             let peers_list_clone = self.peers_list.clone();
             let ip_entry_clone = self.ip_entry.clone();
+            let pin_entry_clone = self.pin_entry.clone();
+            let mut known_ips = std::collections::HashSet::new();
 
             glib::MainContext::default().spawn_local(async move {
                 while let Some(event) = rx.recv().await {
                     match event {
                         DiscoveryEvent::PeerDiscovered(peer) => {
                             if peer.is_host {
-                                let row = libadwaita::ActionRow::builder()
-                                    .title(&peer.hostname)
-                                    .subtitle(&peer.addr.ip().to_string())
-                                    .activatable(true)
-                                    .build();
-
                                 let ip_str = peer.addr.ip().to_string();
-                                let entry = ip_entry_clone.clone();
-                                row.connect_activated(move |_| {
-                                    entry.set_text(&ip_str);
-                                });
+                                if known_ips.insert(ip_str.clone()) {
+                                    let row = libadwaita::ActionRow::builder()
+                                        .title(&peer.hostname)
+                                        .subtitle(&ip_str)
+                                        .activatable(true)
+                                        .build();
 
-                                peers_list_clone.append(&row);
+                                    let entry = ip_entry_clone.clone();
+                                    let pin = pin_entry_clone.clone();
+                                    let ip_for_click = ip_str.clone();
+                                    row.connect_activated(move |_| {
+                                        entry.set_text(&ip_for_click);
+                                        pin.grab_focus();
+                                    });
+
+                                    peers_list_clone.append(&row);
+                                }
                             }
                         }
                         DiscoveryEvent::PeerLost(_) => {}

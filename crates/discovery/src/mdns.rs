@@ -112,15 +112,26 @@ impl DiscoveryService {
             format!("{}.local.", hostname)
         };
 
+        let local_ips = get_local_ips();
+        let ip_arg = if local_ips.is_empty() {
+            "127.0.0.1".to_string()
+        } else {
+            local_ips
+                .iter()
+                .map(|ip| ip.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        };
+
         let service_info = ServiceInfo::new(
             MDNS_SERVICE_TYPE,
             &self.instance_name,
             &host_name,
-            "",  // Let mdns-sd figure out the IP
+            ip_arg.as_str(),
             port,
             properties,
         )
-        .with_context(|| format!("Failed to create ServiceInfo (type={}, instance={}, host={})", MDNS_SERVICE_TYPE, self.instance_name, host_name))?;
+        .with_context(|| format!("Failed to create ServiceInfo (type={}, instance={}, host={}, ips={})", MDNS_SERVICE_TYPE, self.instance_name, host_name, ip_arg))?;
 
         self.daemon
             .register(service_info)
