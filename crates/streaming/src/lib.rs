@@ -8,4 +8,4 @@ pub mod host_pipeline;
 pub mod signaling;
 
 pub use client_pipeline::ClientPipeline;
-pub use host_pipeline::HostPipeline;
+pub use host_pipeline::{H264Encoder, HostPipeline};

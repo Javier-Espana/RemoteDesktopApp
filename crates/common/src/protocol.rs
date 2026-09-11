@@ -23,6 +23,8 @@ pub enum SignalingMessage {
     IceCandidate(IceCandidatePayload),
     /// Session control messages.
     SessionControl(SessionControlPayload),
+    /// Input event forwarded from client to host.
+    Input(InputEvent),
 }
 
 /// Host capabilities announced during discovery.

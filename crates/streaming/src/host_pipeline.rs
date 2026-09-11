@@ -10,21 +10,74 @@ use anyhow::{Context, Result};
 use gstreamer::prelude::*;
 use tracing::{debug, error, info};
 
+/// Supported H.264 video encoders with automatic hardware acceleration detection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum H264Encoder {
+    Nvenc,
+    Vaapi,
+    SoftwareX264,
+}
+
+impl H264Encoder {
+    /// Detect the best available video encoder on the system.
+    pub fn detect_best() -> Self {
+        if gstreamer::ElementFactory::find("nvh264enc").is_some()
+            && std::path::Path::new("/dev/nvidia0").exists()
+        {
+            info!("Hardware video encoder detected: NVIDIA NVENC (nvh264enc)");
+            return H264Encoder::Nvenc;
+        }
+
+        if gstreamer::ElementFactory::find("vaapih264enc").is_some()
+            && std::path::Path::new("/dev/dri/renderD128").exists()
+        {
+            info!("Hardware video encoder detected: VA-API (vaapih264enc)");
+            return H264Encoder::Vaapi;
+        }
+
+        info!("Using software video encoder: x264enc (CPU ultrafast zero-latency)");
+        H264Encoder::SoftwareX264
+    }
+
+    /// Return the GStreamer pipeline string for this encoder.
+    pub fn to_pipeline_str(&self, bitrate_kbps: u32, framerate: u32) -> String {
+        match self {
+            H264Encoder::Nvenc => {
+                format!(
+                    "nvh264enc bitrate={bitrate} preset=low-latency-hq gop-size={key_int} rc-mode=cbr",
+                    bitrate = bitrate_kbps,
+                    key_int = framerate
+                )
+            }
+            H264Encoder::Vaapi => {
+                format!(
+                    "vaapih264enc bitrate={bitrate} rate-control=cbr keyframe-period={key_int}",
+                    bitrate = bitrate_kbps,
+                    key_int = framerate
+                )
+            }
+            H264Encoder::SoftwareX264 => {
+                format!(
+                    "x264enc tune=zerolatency speed-preset=ultrafast bitrate={bitrate} \
+                     key-int-max={key_int} bframes=0 byte-stream=true",
+                    bitrate = bitrate_kbps,
+                    key_int = framerate
+                )
+            }
+        }
+    }
+}
+
 /// Host-side streaming pipeline.
 pub struct HostPipeline {
     pipeline: gstreamer::Pipeline,
     webrtcbin: gstreamer::Element,
     _bus_watch: gstreamer::bus::BusWatchGuard,
+    encoder: H264Encoder,
 }
 
 impl HostPipeline {
     /// Create a new host pipeline with the given capture region and encoding parameters.
-    ///
-    /// # Arguments
-    /// * `startx`, `starty` - Top-left corner of the capture region
-    /// * `width`, `height` - Dimensions of the capture region
-    /// * `framerate` - Target framerate (e.g. 60)
-    /// * `bitrate_kbps` - Video bitrate in kbps (e.g. 15000)
     pub fn new(
         startx: u32,
         starty: u32,
@@ -32,21 +85,34 @@ impl HostPipeline {
         height: u32,
         framerate: u32,
         bitrate_kbps: u32,
+        use_pipewire: bool,
     ) -> Result<Self> {
         gstreamer::init().context("Failed to initialize GStreamer")?;
 
         let endx = startx + width - 1;
         let endy = starty + height - 1;
 
+        let encoder = H264Encoder::detect_best();
+        let encoder_str = encoder.to_pipeline_str(bitrate_kbps, framerate);
+
+        let video_src = if use_pipewire {
+            format!(
+                "pipewiresrc do-timestamp=true keepalive-time=1000 \
+                 ! video/x-raw,framerate={framerate}/1"
+            )
+        } else {
+            format!(
+                "ximagesrc display-name=$DISPLAY use-damage=false show-pointer=true \
+                 startx={startx} starty={starty} endx={endx} endy={endy} \
+                 ! video/x-raw,framerate={framerate}/1"
+            )
+        };
+
         // Build the pipeline description
         let pipeline_desc = format!(
-            "ximagesrc display-name=$DISPLAY use-damage=false show-pointer=true \
-                startx={startx} starty={starty} endx={endx} endy={endy} \
-             ! video/x-raw,framerate={framerate}/1 \
+            "{video_src} \
              ! videoconvert \
-             ! x264enc tune=zerolatency speed-preset=ultrafast bitrate={bitrate_kbps} \
-                key-int-max={key_int} bframes=0 \
-                byte-stream=true \
+             ! {encoder_str} \
              ! rtph264pay config-interval=-1 pt=96 aggregate-mode=zero-latency \
              ! application/x-rtp,media=video,encoding-name=H264,payload=96 \
              ! webrtcbin name=sendrecv bundle-policy=max-bundle \
@@ -57,16 +123,11 @@ impl HostPipeline {
              ! rtpopuspay pt=97 \
              ! application/x-rtp,media=audio,encoding-name=OPUS,payload=97 \
              ! sendrecv.",
-            startx = startx,
-            starty = starty,
-            endx = endx,
-            endy = endy,
-            framerate = framerate,
-            bitrate_kbps = bitrate_kbps,
-            key_int = framerate, // keyframe every second
+            video_src = video_src,
+            encoder_str = encoder_str,
         );
 
-        info!("Creating host pipeline");
+        info!("Creating host pipeline with encoder: {:?}", encoder);
         debug!("Pipeline: {}", pipeline_desc);
 
         let pipeline = gstreamer::parse::launch(&pipeline_desc)
@@ -128,7 +189,30 @@ impl HostPipeline {
             pipeline,
             webrtcbin,
             _bus_watch: bus_watch,
+            encoder,
         })
+    }
+
+    /// Get the active encoder type.
+    pub fn encoder(&self) -> H264Encoder {
+        self.encoder
+    }
+
+    /// Dynamically update video bitrate in kbps during active streaming.
+    pub fn set_bitrate(&self, bitrate_kbps: u32) -> Result<()> {
+        let encoder_names = ["x264enc", "nvh264enc", "vaapih264enc"];
+        for element in self.pipeline.iterate_elements() {
+            if let Ok(element) = element {
+                if let Some(factory) = element.factory() {
+                    if encoder_names.iter().any(|name| factory.name() == *name) {
+                        element.set_property("bitrate", bitrate_kbps);
+                        info!("Dynamically updated encoder bitrate to {} kbps", bitrate_kbps);
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        anyhow::bail!("No active video encoder found in pipeline to update bitrate")
     }
 
     /// Get a reference to the webrtcbin element (for signaling).
