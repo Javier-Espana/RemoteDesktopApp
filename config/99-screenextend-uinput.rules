@@ -1,0 +1,4 @@
+# Allow users in the "input" group to access /dev/uinput
+# Install: sudo cp 99-screenextend-uinput.rules /etc/udev/rules.d/
+# Reload: sudo udevadm control --reload-rules && sudo udevadm trigger
+KERNEL=="uinput", GROUP="input", MODE="0660"
