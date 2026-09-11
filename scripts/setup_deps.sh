@@ -10,6 +10,8 @@ sudo apt update
 
 sudo apt install -y \
     build-essential \
+    rustc \
+    cargo \
     pkg-config \
     gstreamer1.0-plugins-bad \
     libgstreamer-plugins-bad1.0-dev \
