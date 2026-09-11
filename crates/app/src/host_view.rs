@@ -208,7 +208,8 @@ impl HostView {
             }
         };
 
-        // Create GStreamer pipeline
+        // Create GStreamer pipeline with hardware encoder detection and Wayland/X11 source
+        let use_pipewire = session == SessionType::Wayland;
         let pipeline = HostPipeline::new(
             vx,
             vy,
@@ -216,8 +217,10 @@ impl HostView {
             vh,
             config.framerate,
             config.video_bitrate_kbps,
+            use_pipewire,
         )?;
 
+        status_label.set_label(&format!("Streaming ({:?})", pipeline.encoder()));
         pipeline.create_input_data_channel()?;
         pipeline.start()?;
 
@@ -229,6 +232,13 @@ impl HostView {
             tokio::select! {
                 msg = channel.recv() => {
                     match msg {
+                        Ok(screenextend_common::protocol::SignalingMessage::Input(input_ev)) => {
+                            if let Some(ref mut inj) = injector {
+                                if let Err(e) = inj.inject(&input_ev) {
+                                    warn!("Error injecting input event: {}", e);
+                                }
+                            }
+                        }
                         Ok(screenextend_common::protocol::SignalingMessage::SessionControl(
                             screenextend_common::protocol::SessionControlPayload::Disconnect
                         )) => {
@@ -242,7 +252,7 @@ impl HostView {
                         }
                     }
                 }
-                _ = tokio::time::sleep(tokio::time::Duration::from_millis(50)) => {}
+                _ = tokio::time::sleep(tokio::time::Duration::from_millis(10)) => {}
             }
         }
 

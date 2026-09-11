@@ -228,7 +228,8 @@ impl ClientView {
         let video_widget = Rc::clone(&self.video_widget);
 
         // Input forwarding setup
-        let (input_tx, _input_rx) = mpsc::channel(100);
+        let (input_tx, input_rx) = mpsc::channel(100);
+        let input_rx = Arc::new(tokio::sync::Mutex::new(input_rx));
         let input_capture = InputCapture::new(input_tx);
 
         // Attach mouse motion controller to video picture
@@ -282,6 +283,7 @@ impl ClientView {
         let is_conn = Arc::clone(&is_connected);
         let stack_clone = stack.clone();
         let vw_clone = Rc::clone(&video_widget);
+        let input_rx_clone = Arc::clone(&input_rx);
 
         self.connect_btn.connect_clicked(move |_| {
             let ip = ip_entry.text().to_string();
@@ -297,6 +299,7 @@ impl ClientView {
             let is_conn_inner = Arc::clone(&is_conn);
             let stack_inner = stack_clone.clone();
             let vw_inner = Rc::clone(&vw_clone);
+            let input_rx_inner = Arc::clone(&input_rx_clone);
 
             glib::MainContext::default().spawn_local(async move {
                 let addr_str = format!("{}:{}", ip, DEFAULT_SIGNALING_PORT);
@@ -363,6 +366,37 @@ impl ClientView {
                         is_conn_inner.store(true, Ordering::SeqCst);
                         stack_inner.set_visible_child_name("stream");
                         info!("Connected to host. Streaming started.");
+
+                        // Forward captured input to host
+                        let mut rx_guard = input_rx_inner.lock().await;
+                        while is_conn_inner.load(Ordering::SeqCst) {
+                            tokio::select! {
+                                Some(input_ev) = rx_guard.recv() => {
+                                    let _ = channel.send(&screenextend_common::protocol::SignalingMessage::Input(input_ev)).await;
+                                }
+                                msg = channel.recv() => {
+                                    match msg {
+                                        Ok(screenextend_common::protocol::SignalingMessage::SessionControl(
+                                            screenextend_common::protocol::SessionControlPayload::Disconnect
+                                        )) => {
+                                            info!("Host disconnected");
+                                            break;
+                                        }
+                                        Ok(_) => {}
+                                        Err(e) => {
+                                            tracing::warn!("Signaling channel closed: {}", e);
+                                            break;
+                                        }
+                                    }
+                                }
+                                _ = tokio::time::sleep(tokio::time::Duration::from_millis(5)) => {}
+                            }
+                        }
+
+                        let _ = pipeline.stop();
+                        is_conn_inner.store(false, Ordering::SeqCst);
+                        stack_inner.set_visible_child_name("setup");
+                        status.set_label("Disconnected");
                     }
                     Err(e) => {
                         error!("Connection failed: {}", e);
