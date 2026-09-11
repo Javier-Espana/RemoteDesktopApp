@@ -1,0 +1,31 @@
+Source: screenextend
+Section: utils
+Priority: optional
+Maintainer: Javier España <javier@screenextend.local>
+Build-Depends: debhelper-compat (= 13),
+               cargo,
+               rustc,
+               libgstreamer1.0-dev,
+               libgstreamer-plugins-base1.0-dev,
+               libgstreamer-plugins-bad1.0-dev,
+               libgtk-4-dev,
+               libadwaita-1-dev,
+               libpipewire-0.3-dev,
+               libnice-dev,
+               libsrtp2-dev,
+               pkg-config
+Standards-Version: 4.6.2
+Homepage: https://github.com/Javier-Espana/RemoteDesktopApp
+
+Package: screenextend
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         gstreamer1.0-plugins-good,
+         gstreamer1.0-plugins-bad,
+         gstreamer1.0-pipewire,
+         avahi-daemon
+Description: Peer-to-peer Linux screen extension utility
+ ScreenExtend allows extending your desktop display to a secondary computer
+ over a local network connection using WebRTC with ultra-low latency and
+ bidirectional mouse and keyboard forwarding.

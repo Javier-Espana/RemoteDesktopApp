@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=ScreenExtend
+GenericName=Virtual Display & Screen Extender
+Comment=Extend your Linux desktop to another computer over local Wi-Fi or Ethernet
+Exec=screenextend-app
+Icon=org.linux.screenextend
+Terminal=false
+Type=Application
+Categories=Utility;Network;AudioVideo;
+Keywords=screen;display;extend;monitor;vnc;remote;desktop;webrtc;
+StartupNotify=true
+X-GNOME-UsesNotifications=true

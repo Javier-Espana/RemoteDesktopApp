@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --buildsystem=cargo
+
+override_dh_auto_install:
+	install -Dm755 target/release/screenextend-app debian/screenextend/usr/bin/screenextend-app
+	install -Dm644 data/org.linux.screenextend.desktop debian/screenextend/usr/share/applications/org.linux.screenextend.desktop
+	install -Dm644 data/icons/hicolor/scalable/apps/org.linux.screenextend.svg debian/screenextend/usr/share/icons/hicolor/scalable/apps/org.linux.screenextend.svg
+	install -Dm644 config/99-screenextend-uinput.rules debian/screenextend/lib/udev/rules.d/99-screenextend-uinput.rules

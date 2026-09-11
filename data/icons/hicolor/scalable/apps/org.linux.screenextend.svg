@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="primary-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3584e4" />
+      <stop offset="100%" stop-color="#1c71d8" />
+    </linearGradient>
+    <linearGradient id="secondary-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#26a269" />
+      <stop offset="100%" stop-color="#1a5fb4" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Main Monitor (Host) -->
+  <g filter="url(#shadow)">
+    <!-- Stand -->
+    <rect x="36" y="80" width="16" height="18" rx="2" fill="#77767b" />
+    <path d="M 28 98 L 60 98 L 56 102 L 32 102 Z" fill="#5e5c64" />
+    <!-- Display Body -->
+    <rect x="12" y="24" width="64" height="58" rx="6" fill="#241f31" />
+    <!-- Screen Glass -->
+    <rect x="16" y="28" width="56" height="50" rx="3" fill="url(#primary-grad)" />
+    <!-- Inner lines representing desktop content -->
+    <rect x="22" y="34" width="24" height="4" rx="2" fill="#ffffff" opacity="0.8" />
+    <rect x="22" y="42" width="36" height="18" rx="3" fill="#ffffff" opacity="0.2" />
+  </g>
+
+  <!-- Extended Monitor (Client / Virtual Display) -->
+  <g filter="url(#shadow)">
+    <!-- Stand -->
+    <rect x="80" y="86" width="14" height="16" rx="2" fill="#77767b" />
+    <path d="M 72 102 L 102 102 L 98 106 L 76 106 Z" fill="#5e5c64" />
+    <!-- Display Body -->
+    <rect x="56" y="38" width="60" height="50" rx="6" fill="#1e1e1e" />
+    <!-- Screen Glass with signal waves -->
+    <rect x="60" y="42" width="52" height="42" rx="3" fill="url(#secondary-grad)" />
+    <!-- Signal wave / arrow representing P2P connection -->
+    <path d="M 70 63 L 78 57 L 78 61 L 94 61 L 94 65 L 78 65 L 78 69 Z" fill="#ffffff" opacity="0.9" />
+    <circle cx="102" cy="63" r="3" fill="#57e389" />
+  </g>
+</svg>

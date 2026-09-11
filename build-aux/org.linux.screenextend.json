@@ -1,0 +1,44 @@
+{
+  "app-id": "org.linux.screenextend",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "46",
+  "sdk": "org.gnome.Sdk",
+  "sdk-extensions": [
+    "org.freedesktop.Sdk.Extension.rust-stable"
+  ],
+  "command": "screenextend-app",
+  "finish-args": [
+    "--share=ipc",
+    "--share=network",
+    "--socket=fallback-x11",
+    "--socket=wayland",
+    "--socket=pulseaudio",
+    "--device=all",
+    "--filesystem=xdg-run/pipewire-0",
+    "--system-talk-name=org.freedesktop.Avahi"
+  ],
+  "build-options": {
+    "append-path": "/usr/lib/sdk/rust-stable/bin",
+    "env": {
+      "CARGO_HOME": "/run/build/screenextend/cargo"
+    }
+  },
+  "modules": [
+    {
+      "name": "screenextend",
+      "buildsystem": "simple",
+      "build-commands": [
+        "cargo --offline build --release --bin screenextend-app",
+        "install -Dm755 target/release/screenextend-app /app/bin/screenextend-app",
+        "install -Dm644 data/org.linux.screenextend.desktop /app/share/applications/org.linux.screenextend.desktop",
+        "install -Dm644 data/icons/hicolor/scalable/apps/org.linux.screenextend.svg /app/share/icons/hicolor/scalable/apps/org.linux.screenextend.svg"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "../"
+        }
+      ]
+    }
+  ]
+}
