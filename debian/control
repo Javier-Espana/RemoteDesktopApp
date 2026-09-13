@@ -23,8 +23,12 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          gstreamer1.0-plugins-good,
          gstreamer1.0-plugins-bad,
+         gstreamer1.0-plugins-ugly,
+         gstreamer1.0-libav,
          gstreamer1.0-nice,
          gstreamer1.0-pipewire,
+         x11-xserver-utils,
+         xcvt,
          avahi-daemon
 Description: Peer-to-peer Linux screen extension utility
  ScreenExtend allows extending your desktop display to a secondary computer

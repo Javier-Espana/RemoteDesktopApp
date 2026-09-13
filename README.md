@@ -19,7 +19,14 @@ Una aplicación **P2P nativa para Linux (Ubuntu/Debian)** que extiende el escrit
 
 ---
 
-## 🏗️ Arquitectura del Sistema
+## 📚 Documentación Técnica y para Colaboradores
+
+- **[Arquitectura y Diseño Técnico](docs/ARCHITECTURE.md)**: Estructura del workspace, flujo de señalización WebRTC, diagramas y responsabilidades de los crates.
+- **[Decisiones de Diseño y Resolución de Problemas (Troubleshooting)](docs/TROUBLESHOOTING_AND_DECISIONS.md)**: Diagnóstico detallado de errores (libnice/webrtcbin, compatibilidad NVENC RTX 50/driver 595, mDNS, uinput).
+- **[Guía de Despliegue y Empaquetado](docs/DEPLOYMENT_AND_PACKAGING.md)**: Instalación de dependencias, generación de paquetes `.deb` y manifiesto Flatpak.
+- **[Guía de Contribución](docs/CONTRIBUTING.md)**: Estándares de código, cómo ejecutar tests y roadmap de tareas prioritarias.
+
+---
 
 ```text
 [ Máquina Host ]                                      [ Máquina Cliente ]

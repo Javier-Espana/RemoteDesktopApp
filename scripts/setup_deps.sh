@@ -23,12 +23,19 @@ sudo apt install -y \
     libnice-dev \
     gstreamer1.0-nice \
     libsrtp2-dev \
+    libx11-dev \
+    x11-xserver-utils \
+    xcvt \
+    libssl-dev \
+    curl \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-ugly \
     gstreamer1.0-libav \
     gstreamer1.0-pipewire \
     gstreamer1.0-vaapi \
     gstreamer1.0-gl \
+    gstreamer1.0-x \
+    gstreamer1.0-alsa \
     libsdl2-dev \
     avahi-daemon
 
@@ -53,12 +60,23 @@ fi
 
 echo ""
 echo "=== Verifying GStreamer plugins ==="
-gst-inspect-1.0 --exists x264enc && echo "✓ x264enc" || echo "✗ x264enc MISSING"
-gst-inspect-1.0 --exists opusenc && echo "✓ opusenc" || echo "✗ opusenc MISSING"
-gst-inspect-1.0 --exists webrtcbin && echo "✓ webrtcbin" || echo "✗ webrtcbin MISSING"
-gst-inspect-1.0 --exists nicesink && echo "✓ nicesink (gstreamer1.0-nice)" || echo "✗ nicesink (gstreamer1.0-nice) MISSING"
-gst-inspect-1.0 --exists pipewiresrc && echo "✓ pipewiresrc" || echo "✗ pipewiresrc MISSING"
-gst-inspect-1.0 --exists ximagesrc && echo "✓ ximagesrc" || echo "✗ ximagesrc MISSING"
+gst-inspect-1.0 --exists x264enc && echo "✓ x264enc (H.264 software encoder)" || echo "✗ x264enc MISSING"
+gst-inspect-1.0 --exists avdec_h264 && echo "✓ avdec_h264 (H.264 software decoder)" || echo "✗ avdec_h264 MISSING"
+gst-inspect-1.0 --exists opusenc && echo "✓ opusenc (Audio encoder)" || echo "✗ opusenc MISSING"
+gst-inspect-1.0 --exists opusdec && echo "✓ opusdec (Audio decoder)" || echo "✗ opusdec MISSING"
+gst-inspect-1.0 --exists webrtcbin && echo "✓ webrtcbin (WebRTC transport)" || echo "✗ webrtcbin MISSING"
+gst-inspect-1.0 --exists nicesink && echo "✓ nicesink (libnice ICE agent)" || echo "✗ nicesink (gstreamer1.0-nice) MISSING"
+gst-inspect-1.0 --exists pipewiresrc && echo "✓ pipewiresrc (Wayland screen capture)" || echo "✗ pipewiresrc MISSING"
+gst-inspect-1.0 --exists ximagesrc && echo "✓ ximagesrc (X11 screen capture)" || echo "✗ ximagesrc MISSING"
+gst-inspect-1.0 --exists pulsesrc && echo "✓ pulsesrc (PulseAudio capture)" || echo "✗ pulsesrc MISSING"
+gst-inspect-1.0 --exists autoaudiosink && echo "✓ autoaudiosink (Audio playback)" || echo "✗ autoaudiosink MISSING"
+
+echo ""
+echo "=== Verifying Display & Network Tools ==="
+which xrandr >/dev/null && echo "✓ xrandr" || echo "✗ xrandr MISSING"
+which cvt >/dev/null && echo "✓ cvt" || echo "✗ cvt MISSING"
+systemctl is-active --quiet avahi-daemon && echo "✓ avahi-daemon (active)" || echo "⚠ avahi-daemon not active (mDNS may be limited)"
+[ -c /dev/uinput ] && echo "✓ /dev/uinput exists" || echo "⚠ /dev/uinput missing (run: sudo modprobe uinput)"
 
 echo ""
 echo "=== Verifying Rust toolchain ==="
