@@ -6,7 +6,7 @@ Una aplicación **P2P nativa para Linux (Ubuntu/Debian)** que extiende el escrit
 
 ## 🌟 Características Principales
 
-* **Descubrimiento Automático LAN (mDNS):** Encuentra automáticamente instancias de la app en la misma red local (`_linux-screenextend._tcp.local.`) sin necesidad de configurar direcciones IP manualmente.
+* **Descubrimiento Automático LAN (mDNS):** Encuentra automáticamente instancias de la app en la misma red local (`_screenextend._tcp.local.`) sin necesidad de configurar direcciones IP manualmente.
 * **Emparejamiento Seguro con PIN:** Código dinámico de 4 dígitos generado en el Host para autorizar la conexión.
 * **Streaming de Ultra-Baja Latencia (WebRTC + GStreamer):**
   * Video: Captura de pantalla eficiente (`ximagesrc` / `pipewiresrc`), codificación H.264 optimizada sin frames B (`tune=zerolatency`, `speed-preset=ultrafast`) y payload RTP directo.

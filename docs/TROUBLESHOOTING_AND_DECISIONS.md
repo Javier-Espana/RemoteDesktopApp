@@ -60,6 +60,11 @@ fn test_encoder(desc: &str) -> bool {
 ```
 Si la prueba del pipeline con `nvh264enc` falla, el sistema emite una advertencia y recurre de manera transparente a `x264enc` (CPU con perfil `tune=zerolatency speed-preset=ultrafast`), el cual funciona sin latencia perceptible en redes LAN.
 
+La prueba usa la misma configuración que el pipeline real. Algunos drivers rechazan
+incluso `preset=default` y muestran `Selected preset not supported`; en ese caso
+NVENC se considera no disponible y se usa automáticamente `x264enc`. El error no
+debe dejar un pipeline NVENC parcialmente iniciado.
+
 ---
 
 ## 3. Descubrimiento mDNS y Selección de Interfaces de Red
@@ -134,6 +139,9 @@ el hostname completo, por lo que algunos equipos no podían registrarse. Ahora l
 instancia usa el formato corto `se-XXXXXXXX`, derivado de un hash estable del
 hostname. El cierre también tolera que el servicio no haya llegado a registrarse o
 que el daemon ya esté cerrando.
+
+El tipo de servicio también debe respetar ese límite. Por eso se usa
+`_screenextend._tcp.local.` en lugar de `_linux-screenextend._tcp.local.`.
 
 ## 7. Estado actual de Wayland
 

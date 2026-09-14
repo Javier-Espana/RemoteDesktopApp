@@ -11,7 +11,7 @@ Este documento detalla el diseño de arquitectura, el flujo de datos y las respo
 ### Objetivos Clave
 - **Latencia ultra-baja**: Menor a 30-50 ms en Wi-Fi / Ethernet local mediante WebRTC (`webrtcbin`) y GStreamer con codificación H.264 acelerada por hardware o con perfil `zerolatency`.
 - **Experiencia de usuario nativa**: Interfaz moderna GTK4 + Libadwaita integrada en el entorno GNOME / Linux.
-- **Configuración cero**: Descubrimiento dinámico de máquinas en la red vía mDNS (`_linux-screenextend._tcp.local.`) y enlace seguro mediante PIN efímero de 4 dígitos.
+- **Configuración cero**: Descubrimiento dinámico de máquinas en la red vía mDNS (`_screenextend._tcp.local.`) y enlace seguro mediante PIN efímero de 4 dígitos.
 - **Control bidireccional de periféricos**: Reenvío en tiempo real de eventos de ratón (movimiento, clics, scroll) y teclado desde la máquina cliente hacia el host con inyección a nivel de kernel vía `/dev/uinput`.
 
 ---
@@ -88,7 +88,7 @@ El proyecto está estructurado como un **Cargo Workspace** de 6 crates modulares
 ### Paso 1: Descubrimiento (mDNS)
 1. El **Host** inicia y llama a `DiscoveryService::register(port, is_host: true)`.
 2. Se resuelve la dirección IP física real de la LAN (priorizando `192.168.x.x` o `10.x.x.x` sobre adaptadores virtuales como Docker).
-3. Se publica el servicio mDNS `_linux-screenextend._tcp.local.` con metadatos (nombre de host, versión, rol).
+3. Se publica el servicio mDNS `_screenextend._tcp.local.` con metadatos (nombre de host, versión, rol).
 4. La **Laptop/Cliente** ejecuta `DiscoveryService::start_browsing()` para recibir eventos de red y poblar la lista de hosts disponibles.
 
 ### Paso 2: Handshake y Autenticación por PIN

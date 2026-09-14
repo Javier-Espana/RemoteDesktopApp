@@ -1,6 +1,6 @@
 //! mDNS service discovery using the `mdns-sd` crate.
 //!
-//! Registers a `_linux-screenextend._tcp.local.` service on the local network
+//! Registers a `_screenextend._tcp.local.` service on the local network
 //! and discovers other instances of the same service.
 
 use anyhow::{Context, Result};
@@ -195,7 +195,7 @@ impl DiscoveryService {
     /// Unregister the service and stop the daemon.
     pub fn shutdown(self) -> Result<()> {
         if self.registered {
-            let full_name = format!("{}{}", self.instance_name, MDNS_SERVICE_TYPE);
+            let full_name = service_full_name(&self.instance_name);
             match self.daemon.unregister(&full_name) {
                 Ok(response) => {
                     let _ = response.recv_timeout(Duration::from_secs(1));
@@ -224,6 +224,10 @@ fn make_instance_name(hostname: &str) -> String {
     let mut hasher = DefaultHasher::new();
     hostname.hash(&mut hasher);
     format!("se-{:08x}", hasher.finish() as u32)
+}
+
+fn service_full_name(instance_name: &str) -> String {
+    format!("{}.{}", instance_name, MDNS_SERVICE_TYPE)
 }
 
 /// Process an individual mDNS event.
@@ -329,6 +333,14 @@ mod tests {
         let name = make_instance_name("a-very-long-hostname-that-used-to-break-mdns");
         assert!(name.len() <= 15);
         assert!(name.starts_with("se-"));
+    }
+
+    #[test]
+    fn service_full_name_has_dns_label_separator() {
+        assert_eq!(
+            service_full_name("se-12345678"),
+            "se-12345678._screenextend._tcp.local."
+        );
     }
 
     #[test]

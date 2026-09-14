@@ -36,7 +36,11 @@ impl H264Encoder {
         if gstreamer::ElementFactory::find("nvh264enc").is_some()
             && std::path::Path::new("/dev/nvidia0").exists()
         {
-            if Self::test_encoder("videotestsrc num-buffers=1 ! videoconvert ! nvh264enc ! fakesink") {
+            if Self::test_encoder(
+                "videotestsrc num-buffers=1 ! videoconvert ! \
+                 nvh264enc bitrate=1000 preset=default rc-mode=cbr bframes=0 \
+                 gop-size=60 ! fakesink",
+            ) {
                 info!("Hardware video encoder detected and verified: NVIDIA NVENC (nvh264enc)");
                 return H264Encoder::Nvenc;
             } else {
@@ -64,7 +68,7 @@ impl H264Encoder {
         match self {
             H264Encoder::Nvenc => {
                 format!(
-                    "nvh264enc bitrate={bitrate} preset=low-latency-hq gop-size={key_int} rc-mode=cbr",
+                    "nvh264enc bitrate={bitrate} preset=default rc-mode=cbr bframes=0 gop-size={key_int}",
                     bitrate = bitrate_kbps,
                     key_int = framerate
                 )
@@ -85,6 +89,18 @@ impl H264Encoder {
                 )
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::H264Encoder;
+
+    #[test]
+    fn nvenc_uses_driver_compatible_default_preset() {
+        let pipeline = H264Encoder::Nvenc.to_pipeline_str(15_000, 60);
+        assert!(pipeline.contains("preset=default"));
+        assert!(!pipeline.contains("low-latency-hq"));
     }
 }
 

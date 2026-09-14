@@ -15,7 +15,7 @@ La aplicación está construida como un **Workspace de Rust** modular dividido e
    - Configuración global (`AppConfig`, resoluciones estándar).
 
 2. **`screenextend-discovery`**:
-   - Descubrimiento local sin servidor central vía **mDNS** (`_linux-screenextend._tcp.local.`) con `mdns-sd`.
+   - Descubrimiento local sin servidor central vía **mDNS** (`_screenextend._tcp.local.`) con `mdns-sd`.
    - Handshake TCP con **autenticación por PIN de 4 dígitos** generado dinámicamente en el Host.
    - Canal de señalización TCP bidireccional mediante JSON delimitado por saltos de línea (`SignalingChannel`).
 

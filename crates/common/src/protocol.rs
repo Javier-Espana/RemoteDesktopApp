@@ -169,7 +169,7 @@ pub const PROTOCOL_VERSION: u32 = 1;
 pub const DEFAULT_SIGNALING_PORT: u16 = 9876;
 
 /// mDNS service type for discovery.
-pub const MDNS_SERVICE_TYPE: &str = "_linux-screenextend._tcp.local.";
+pub const MDNS_SERVICE_TYPE: &str = "_screenextend._tcp.local.";
 
 #[cfg(test)]
 mod tests {

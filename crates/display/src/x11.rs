@@ -27,12 +27,18 @@ pub struct X11VirtualDisplay {
     virtual_output: Option<String>,
     /// Custom modeline name (if we created one).
     modeline_name: Option<String>,
+    /// Original X11 framebuffer dimensions, used when restoring fallback mode.
+    original_framebuffer: (u32, u32),
+    /// Whether the fallback enlarged the X11 framebuffer.
+    framebuffer_expanded: bool,
 }
 
 impl X11VirtualDisplay {
     /// Create a new X11 virtual display manager.
     pub fn new() -> Result<Self> {
         let (primary_width, primary_height) = detect_primary_resolution()?;
+        let original_framebuffer = detect_framebuffer_resolution()
+            .unwrap_or((primary_width, primary_height));
         info!(
             "Detected primary monitor: {}x{}",
             primary_width, primary_height
@@ -46,6 +52,8 @@ impl X11VirtualDisplay {
             virtual_height: 0,
             virtual_output: None,
             modeline_name: None,
+            original_framebuffer,
+            framebuffer_expanded: false,
         })
     }
 
@@ -169,6 +177,30 @@ impl X11VirtualDisplay {
         self.modeline_name = Some(mode_name);
         Ok(true)
     }
+
+    /// Enlarge the X11 root framebuffer when no disconnected output exists.
+    /// This lets the pointer enter the remote region while ximagesrc captures it.
+    fn try_expand_framebuffer(&mut self, width: u32, height: u32) -> Result<bool> {
+        let framebuffer_width = self.primary_width.saturating_add(width);
+        let framebuffer_height = self.primary_height.max(height);
+        let size = format!("{}x{}", framebuffer_width, framebuffer_height);
+        let status = Command::new("xrandr")
+            .args(["--fb", &size])
+            .status()
+            .context("Failed to enlarge X11 framebuffer")?;
+
+        if !status.success() {
+            warn!("Could not enlarge X11 framebuffer to {}", size);
+            return Ok(false);
+        }
+
+        self.framebuffer_expanded = true;
+        info!(
+            "Expanded X11 framebuffer to {} so the pointer can enter the remote display region",
+            size
+        );
+        Ok(true)
+    }
 }
 
 impl VirtualDisplay for X11VirtualDisplay {
@@ -182,10 +214,11 @@ impl VirtualDisplay for X11VirtualDisplay {
                 info!("Using xrandr virtual output mode");
             }
             Ok(false) => {
-                info!(
-                    "Using region capture mode: capturing {}x{} at ({}, 0)",
-                    width, height, self.primary_width
-                );
+                if self.try_expand_framebuffer(width, height)? {
+                    info!("Using expanded framebuffer capture mode");
+                } else {
+                    info!("Using primary-screen capture fallback");
+                }
             }
             Err(e) => {
                 warn!(
@@ -224,6 +257,16 @@ impl VirtualDisplay for X11VirtualDisplay {
             self.modeline_name = None;
         }
 
+        if self.framebuffer_expanded {
+            let size = format!(
+                "{}x{}",
+                self.original_framebuffer.0, self.original_framebuffer.1
+            );
+            let _ = Command::new("xrandr").args(["--fb", &size]).status();
+            self.framebuffer_expanded = false;
+            info!("Restored X11 framebuffer to {}", size);
+        }
+
         self.active = false;
         info!("Virtual display destroyed");
         Ok(())
@@ -234,9 +277,12 @@ impl VirtualDisplay for X11VirtualDisplay {
             // If we have a real virtual output, capture from its position
             (self.primary_width, 0, self.virtual_width, self.virtual_height)
         } else {
-            // Region capture mode: capture from the right edge of the primary
-            // For MVP, we capture the primary screen content
-            (0, 0, self.virtual_width.min(self.primary_width), self.virtual_height.min(self.primary_height))
+            // Expanded framebuffer mode: capture the remote region to the right.
+            if self.framebuffer_expanded {
+                (self.primary_width, 0, self.virtual_width, self.virtual_height)
+            } else {
+                (0, 0, self.virtual_width.min(self.primary_width), self.virtual_height.min(self.primary_height))
+            }
         }
     }
 
@@ -284,4 +330,13 @@ fn detect_primary_resolution() -> Result<(u32, u32)> {
     // Fallback
     warn!("Could not detect primary resolution, defaulting to 1920x1080");
     Ok((1920, 1080))
+}
+
+/// Detect the current X11 root framebuffer dimensions.
+fn detect_framebuffer_resolution() -> Option<(u32, u32)> {
+    let output = Command::new("xrandr").arg("--query").output().ok()?;
+    let first_line = String::from_utf8_lossy(&output.stdout).lines().next()?.to_string();
+    let current = first_line.split("current ").nth(1)?.split(',').next()?.trim();
+    let (width, height) = current.split_once('x')?;
+    Some((width.parse().ok()?, height.parse().ok()?))
 }
