@@ -96,6 +96,79 @@ sudo usermod -aG input $USER
 ```
 *(Nota: Requiere reiniciar sesión para que el grupo `input` surta efecto).*
 
+### 3. Actualizar a una nueva versión sin conservar artefactos antiguos
+
+Ejecuta esta secuencia desde la raíz del repositorio cada vez que cambies de
+versión o hagas `pull` de cambios importantes. Cierra primero cualquier instancia
+de `screenextend-app` que esté ejecutándose:
+
+```bash
+cd /ruta/a/RemoteDesktopApp
+
+# Comprueba que no haya cambios locales que puedan sobrescribirse.
+git status
+
+# Actualiza el código sin crear un merge automático.
+git pull --ff-only
+
+# Actualiza dependencias del sistema, plugins GStreamer y reglas udev.
+chmod +x scripts/setup_deps.sh
+./scripts/setup_deps.sh
+
+# Elimina todos los artefactos compilados de versiones anteriores.
+cargo clean
+
+# Descarga las dependencias declaradas en Cargo.lock/Cargo.toml.
+cargo fetch
+
+# Verifica el workspace antes de generar el binario final.
+cargo test --workspace
+
+# Genera una compilación limpia de producción.
+cargo build --release --workspace
+```
+
+Si también cambió alguna versión declarada en `Cargo.toml`, actualiza el árbol de
+dependencias de Rust de forma explícita y vuelve a limpiar y validar:
+
+```bash
+cargo update
+cargo clean
+cargo fetch
+cargo test --workspace
+cargo build --release --workspace
+```
+
+No ejecutes `cargo update` en cada actualización normal: puede cambiar versiones
+transitivas y hacer que dos equipos compilen árboles distintos. Para reproducir
+exactamente el árbol bloqueado, usa:
+
+```bash
+cargo fetch --locked
+cargo test --workspace --locked
+cargo build --release --workspace --locked
+```
+
+Si todavía aparecen errores de una versión anterior después de `cargo clean`, haz
+una limpieza profunda del directorio de salida y repite la secuencia:
+
+```bash
+rm -rf target
+cargo fetch
+cargo test --workspace
+cargo build --release --workspace
+```
+
+Después de reinstalar o modificar las reglas de `/dev/uinput`, aplica también:
+
+```bash
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+Si el usuario acaba de entrar al grupo `input`, debe cerrar sesión y volver a
+entrar antes de ejecutar la aplicación.
+
 ---
 
 ## 💻 Compilación y Ejecución

@@ -8,8 +8,11 @@ use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
 use screenextend_common::protocol::MDNS_SERVICE_TYPE;
 use screenextend_common::types::PeerInfo;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
@@ -80,7 +83,7 @@ impl DiscoveryService {
         let daemon = ServiceDaemon::new()
             .context("Failed to create mDNS daemon")?;
 
-        let instance_name = format!("screenextend-{}", hostname);
+        let instance_name = make_instance_name(hostname);
 
         Ok(Self {
             daemon,
@@ -192,12 +195,35 @@ impl DiscoveryService {
     /// Unregister the service and stop the daemon.
     pub fn shutdown(self) -> Result<()> {
         if self.registered {
-            let _ = self.daemon.unregister(&self.instance_name);
+            let full_name = format!("{}{}", self.instance_name, MDNS_SERVICE_TYPE);
+            match self.daemon.unregister(&full_name) {
+                Ok(response) => {
+                    let _ = response.recv_timeout(Duration::from_secs(1));
+                }
+                Err(error) => {
+                    warn!("Could not unregister mDNS service {}: {:?}", self.instance_name, error);
+                }
+            }
         }
-        let _ = self.daemon.shutdown();
+        match self.daemon.shutdown() {
+            Ok(response) => {
+                let _ = response.recv_timeout(Duration::from_secs(1));
+            }
+            Err(error) => {
+                warn!("Could not shut down mDNS daemon cleanly: {:?}", error);
+            }
+        }
         info!("mDNS discovery service shut down");
         Ok(())
     }
+}
+
+/// Build an mDNS instance label within the 15-byte limit imposed by mdns-sd.
+/// A short hash keeps host names distinct without exposing their full length.
+fn make_instance_name(hostname: &str) -> String {
+    let mut hasher = DefaultHasher::new();
+    hostname.hash(&mut hasher);
+    format!("se-{:08x}", hasher.finish() as u32)
 }
 
 /// Process an individual mDNS event.
@@ -297,6 +323,13 @@ async fn handle_mdns_event(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn instance_name_fits_mdns_limit() {
+        let name = make_instance_name("a-very-long-hostname-that-used-to-break-mdns");
+        assert!(name.len() <= 15);
+        assert!(name.starts_with("se-"));
+    }
 
     #[test]
     fn test_mdns_registration() {

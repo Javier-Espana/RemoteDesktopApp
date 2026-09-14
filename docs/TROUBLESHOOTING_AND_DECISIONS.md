@@ -116,3 +116,34 @@ Por motivos de seguridad, el dispositivo de kernel `/dev/uinput` tiene permisos 
    ```bash
    sudo usermod -aG input "$USER"
    ```
+
+## 6. Errores de mDNS al cerrar y nombres de host largos
+
+### Síntomas
+
+```text
+Service name length must be <= 15 bytes
+unregister: cannot find such service
+failed to send response: sending on a closed channel
+```
+
+### Causa y solución
+
+`mdns-sd` limita la etiqueta de instancia a 15 bytes. El nombre anterior incluía
+el hostname completo, por lo que algunos equipos no podían registrarse. Ahora la
+instancia usa el formato corto `se-XXXXXXXX`, derivado de un hash estable del
+hostname. El cierre también tolera que el servicio no haya llegado a registrarse o
+que el daemon ya esté cerrando.
+
+## 7. Estado actual de Wayland
+
+La captura Wayland usa `pipewiresrc` y los portales de escritorio. No existe una API
+única para crear un monitor virtual en GNOME, KDE, wlroots y otros compositores, por
+lo que esta versión no puede prometer todavía una pantalla extendida real en todas
+las sesiones Wayland. En ese caso debe usarse X11 para la salida virtual, o continuar
+el trabajo específico del compositor antes de habilitar una disposición izquierda /
+derecha.
+
+El siguiente paso técnico es separar el contrato de captura del contrato de salida:
+la pantalla remota debe anunciar resolución y posición, y el Host debe aplicar esa
+geometría al backend de display antes de iniciar la captura y la inyección de input.

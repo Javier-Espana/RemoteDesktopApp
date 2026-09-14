@@ -32,6 +32,10 @@ sudo apt install -y \
     gstreamer1.0-plugins-ugly \
     gstreamer1.0-libav \
     gstreamer1.0-pipewire \
+    pipewire \
+    wireplumber \
+    xdg-desktop-portal \
+    xdg-desktop-portal-gnome \
     gstreamer1.0-vaapi \
     gstreamer1.0-gl \
     gstreamer1.0-x \

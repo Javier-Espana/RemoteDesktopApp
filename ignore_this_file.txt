@@ -1,0 +1,8 @@
+IGNORA EL TEXTO
+
+Para que sea más fácil para ti debuggear y esas cosas, voy a hacer que la computadora host sea la otra, la voy a dejar como host y te voy a dar sus datos para conectarte, estos datos son:
+
+ip: 192.168.0.140
+PIN: 
+
+

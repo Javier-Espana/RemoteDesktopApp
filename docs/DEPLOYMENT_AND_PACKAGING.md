@@ -33,7 +33,7 @@ La aplicación depende de bibliotecas de desarrollo para compilar y de plugins d
 | **GStreamer Plugins (Video/Audio)** | `gstreamer1.0-plugins-base`, `gstreamer1.0-plugins-good`, `gstreamer1.0-plugins-bad`, `gstreamer1.0-plugins-ugly`, `gstreamer1.0-libav` | `x264enc`, `opusenc`, `avdec_h264`, `ximagesrc` |
 | **WebRTC & ICE** | `libnice-dev`, `gstreamer1.0-nice`, `libsrtp2-dev` | Negociación ICE en `webrtcbin` y cifrado SRTP |
 | **Interfaz Gráfica** | `libgtk-4-dev`, `libadwaita-1-dev` | UI moderna con temas GNOME |
-| **Captura y Pantalla** | `libpipewire-0.3-dev`, `gstreamer1.0-pipewire`, `x11-xserver-utils`, `xcvt` | Captura en Wayland (`pipewiresrc`) y gestión X11 (`xrandr`, `cvt`) |
+| **Captura y Pantalla** | `libpipewire-0.3-dev`, `gstreamer1.0-pipewire`, `pipewire`, `wireplumber`, `xdg-desktop-portal`, `xdg-desktop-portal-gnome`, `x11-xserver-utils`, `xcvt` | Captura Wayland mediante PipeWire/portal y gestión X11 (`xrandr`, `cvt`) |
 | **Red & Periféricos** | `avahi-daemon`, `libsdl2-dev` | Descubrimiento mDNS y utilidades de hardware |
 
 ---
@@ -53,6 +53,22 @@ chmod +x scripts/setup_deps.sh
 
 > **Nota sobre permisos de uinput:**
 > Si es la primera vez que se añade tu usuario al grupo `input`, es necesario cerrar sesión y volver a entrar (o reiniciar el equipo) para que la sesión tome el grupo nuevo.
+
+### Wayland y portal de captura
+
+En una sesión Wayland, el Host necesita que el portal de escritorio esté activo para
+autorizar la captura. Después de instalar las dependencias, verifica:
+
+```bash
+systemctl --user is-active pipewire
+systemctl --user is-active wireplumber
+gst-inspect-1.0 --exists pipewiresrc
+```
+
+La captura Wayland está preparada para PipeWire, pero la creación de una salida de
+monitor virtual depende del compositor y todavía no es universal. X11 sigue siendo
+la ruta necesaria para crear la salida `xrandr` que permite colocar la pantalla
+remota a la izquierda o a la derecha.
 
 ---
 

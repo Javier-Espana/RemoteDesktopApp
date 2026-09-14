@@ -69,6 +69,14 @@ La aplicación está construida como un **Workspace de Rust** modular dividido e
 
 ## ⏳ Tareas Faltantes / Roadmap Futuro
 
+### Estado de esta iteración
+
+- [x] Nombre de instancia mDNS limitado a 15 bytes y cierre tolerante a daemon ya cerrado.
+- [x] Dependencias de captura Wayland añadidas al instalador (`pipewire`, `wireplumber` y portal GNOME).
+- [x] El backend Wayland ya no falla antes de iniciar la ruta PipeWire.
+- [ ] Salida de monitor virtual Wayland específica del compositor.
+- [ ] Negociación de resolución y posición izquierda/derecha entre Host y Client.
+
 - [ ] **Portal ScreenCast con Token de Sesión Persistente**: Guardar la autorización de screencast en GNOME Shell para reconexiones instantáneas sin cuadro de diálogo del portal.
 - [ ] **DataChannel SCTP Nativo**: Migración del transporte de señalización de entrada TCP directamente a sub-canales SCTP dentro del peer connection WebRTC.
 - [ ] **Compresión Avanzada AV1**: Añadir soporte de codificación AV1 (`svtav1enc` / `vaapiav1enc`) para redes con ancho de banda reducido.
