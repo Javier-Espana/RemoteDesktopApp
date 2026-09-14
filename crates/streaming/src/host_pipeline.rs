@@ -19,13 +19,55 @@ pub enum H264Encoder {
 }
 
 impl H264Encoder {
-    /// Test if an encoder pipeline can actually transition to Paused state.
+    /// Test the encoder until GStreamer reports whether initialization succeeded.
     fn test_encoder(desc: &str) -> bool {
         let _ = gstreamer::init();
         if let Ok(pipeline) = gstreamer::parse::launch(desc) {
-            let res = pipeline.set_state(gstreamer::State::Paused);
+            let bus = match pipeline.bus() {
+                Some(bus) => bus,
+                None => return false,
+            };
+
+            if pipeline.set_state(gstreamer::State::Paused).is_err() {
+                let _ = pipeline.set_state(gstreamer::State::Null);
+                return false;
+            }
+
+            let mut initialized = false;
+            for _ in 0..10 {
+                let message = bus.timed_pop_filtered(
+                    gstreamer::ClockTime::from_mseconds(500),
+                    &[
+                        gstreamer::MessageType::Error,
+                        gstreamer::MessageType::AsyncDone,
+                        gstreamer::MessageType::Eos,
+                    ],
+                );
+
+                match message {
+                    Some(message) => match message.view() {
+                        gstreamer::MessageView::Error(error) => {
+                        tracing::warn!(
+                            "Encoder validation failed: {} ({:?})",
+                            error.error(),
+                            error.debug()
+                        );
+                        initialized = false;
+                        break;
+                        }
+                        gstreamer::MessageView::AsyncDone(_)
+                        | gstreamer::MessageView::Eos(_) => {
+                            initialized = true;
+                            break;
+                        }
+                        _ => {}
+                    },
+                    None => {}
+                }
+            }
+
             let _ = pipeline.set_state(gstreamer::State::Null);
-            res.is_ok()
+            initialized
         } else {
             false
         }
